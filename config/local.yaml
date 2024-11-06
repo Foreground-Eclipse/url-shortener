@@ -1,0 +1,5 @@
+env: "local" # local, dev, prod etc
+http_server: 
+  address: "localhost:8088"
+  timeout: 5s # time to read the request, and same time for answering the request. Handling timeout is inf
+  idle_timeout: 60s # lifetime client conntection
