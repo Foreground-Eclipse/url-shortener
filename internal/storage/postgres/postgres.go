@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/foreground-eclipse/url-shortener/internal/storage"
@@ -71,12 +72,37 @@ func (s *Storage) SaveURL(urlToSave string, alias string) (int64, error) {
 		if postgresErr := err.(*pq.Error); postgresErr.Code == "23505" {
 			return 0, fmt.Errorf("%s, %w", op, storage.ErrURLExists)
 		}
-		errcode := err.(*pq.Error).Code
-		fmt.Println(errcode)
 
 		return 0, fmt.Errorf("%s, %w", op, err)
 	}
 
 	return int64(lastInsertId), nil
 
+}
+
+func (s *Storage) GetURL(alias string) (string, error) {
+	const op = "storage.postgres.GetURL"
+
+	var selectedAlias string
+	err := s.db.QueryRow("select url from url where alias = $1", alias).Scan(&selectedAlias)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", storage.ErrURLNotFound
+		}
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return selectedAlias, nil
+
+}
+
+func (s *Storage) DeleteURL(alias string) error {
+	const op = "storage.postgres.DeleteURL"
+
+	_, err := s.db.Query("delete from url where alias = $1", alias)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }

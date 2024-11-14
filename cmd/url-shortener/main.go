@@ -37,15 +37,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	id, err := storage.SaveURL("https://google.com", "google")
-	if err != nil {
-		log.Error("failed to save url", sl.Err(err))
-
-	}
-	log.Info("Saved url", slog.Int64("id", id))
-
-	fmt.Print(id)
-
 	// TODO: init router: chi <3, chi render
 
 	// TODO: run server:
