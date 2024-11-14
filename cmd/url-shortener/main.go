@@ -2,8 +2,18 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 
 	"github.com/foreground-eclipse/url-shortener/internal/config"
+	"github.com/foreground-eclipse/url-shortener/internal/lib/logger/sl"
+	"github.com/foreground-eclipse/url-shortener/internal/storage/postgres"
+)
+
+const (
+	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
 )
 
 func main() {
@@ -11,13 +21,55 @@ func main() {
 
 	fmt.Println(cfg)
 
-	// TODO: init config: cleanenv/viper idk
+	log := setupLogger(cfg.Env)
 
-	// TODO: init logger: slog
+	log.Info("starting url shortener", slog.String("env", cfg.Env))
+	log.Debug("debug messages are on")
 
-	// TODO: init storage: postgres
+	storage, err := postgres.New()
+	if err != nil {
+		log.Error("failed to init storage", sl.Err(err))
+		os.Exit(1)
+	}
+
+	if err := storage.Init(); err != nil {
+		log.Error("failed to init url table ", sl.Err(err))
+		os.Exit(1)
+	}
+
+	id, err := storage.SaveURL("https://google.com", "google")
+	if err != nil {
+		log.Error("failed to save url", sl.Err(err))
+
+	}
+	log.Info("Saved url", slog.Int64("id", id))
+
+	fmt.Print(id)
 
 	// TODO: init router: chi <3, chi render
 
 	// TODO: run server:
+}
+
+func setupLogger(env string) *slog.Logger {
+	var log *slog.Logger
+
+	switch env {
+	case envLocal:
+		log = slog.New(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envDev:
+		{
+			log = slog.New(
+				slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+			)
+		}
+	case envProd:
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
+	}
+	return log
+
 }
