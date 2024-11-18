@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// New returns new middleware logger
 func New(log *slog.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log = log.With(

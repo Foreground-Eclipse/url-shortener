@@ -6,8 +6,12 @@ import (
 	"os"
 
 	"github.com/foreground-eclipse/url-shortener/internal/config"
+	mwLogger "github.com/foreground-eclipse/url-shortener/internal/http-server/middleware/logger"
+	"github.com/foreground-eclipse/url-shortener/internal/lib/logger/handlers/slogpretty"
 	"github.com/foreground-eclipse/url-shortener/internal/lib/logger/sl"
 	"github.com/foreground-eclipse/url-shortener/internal/storage/postgres"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
@@ -37,7 +41,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: init router: chi <3, chi render
+	router := chi.NewRouter()
+	// middleware
+
+	router.Use(middleware.RequestID)
+	router.Use(mwLogger.New(log))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
+	// router.Use(middleware.RealIP) // unsure
 
 	// TODO: run server:
 }
@@ -47,9 +58,7 @@ func setupLogger(env string) *slog.Logger {
 
 	switch env {
 	case envLocal:
-		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		log = setupPrettySlog()
 	case envDev:
 		{
 			log = slog.New(
@@ -63,4 +72,16 @@ func setupLogger(env string) *slog.Logger {
 	}
 	return log
 
+}
+
+func setupPrettySlog() *slog.Logger {
+	opts := slogpretty.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	handler := opts.NewPrettyHandler(os.Stdout)
+
+	return slog.New(handler)
 }
