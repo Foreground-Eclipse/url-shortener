@@ -14,6 +14,8 @@ import (
 	"github.com/go-playground/validator"
 )
 
+//go:generate go run github.com/vektra/mockery/v2 --name=URLSaver
+
 type Request struct {
 	URL   string `json:"url" validate:"required,url"`
 	Alias string `json:"alias,omitempty"`
@@ -26,6 +28,7 @@ type Response struct {
 
 type URLSaver interface {
 	SaveURL(urlToSave string, alias string) (int64, error)
+	CheckIfAliasExists(alias string) (bool, error)
 }
 
 // TODO: move to config or db or whatever
@@ -65,8 +68,40 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		}
 
 		alias := req.Alias
+
+		exists, err := urlSaver.CheckIfAliasExists(alias)
+		if err != nil {
+			log.Error("failed to save url", sl.Err(err))
+
+			render.JSON(w, r, resp.Error("failed to save url"))
+
+			return
+		}
+
+		if exists {
+			log.Info("alias already exists", slog.String("alias", req.Alias))
+
+			render.JSON(w, r, resp.Error("alias already exists"))
+
+			return
+		}
+
 		if alias == "" {
 			alias = random.NewRandomString(aliasLength)
+
+			exists, err := urlSaver.CheckIfAliasExists(alias)
+			if err != nil {
+				log.Error("failed to save url", sl.Err(err))
+
+				render.JSON(w, r, resp.Error("failed to save url"))
+
+				return
+
+			}
+
+			if exists {
+				alias = random.NewRandomString(aliasLength)
+			}
 
 			id, err := urlSaver.SaveURL(req.URL, alias)
 			if errors.Is(err, storage.ErrURLExists) {
@@ -88,10 +123,14 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 			log.Info("url added", slog.Int64("id", id))
 
-			render.JSON(w, r, Response{
-				Response: resp.OK(),
-				Alias:    alias,
-			})
+			responseOK(w, r, alias)
 		}
 	}
+}
+
+func responseOK(w http.ResponseWriter, r *http.Request, alias string) {
+	render.JSON(w, r, Response{
+		Response: resp.OK(),
+		Alias:    alias,
+	})
 }
