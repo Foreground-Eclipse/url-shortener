@@ -46,8 +46,8 @@ func (s *Storage) createUrlTable() error {
 
 	query := `create table  if not exists url(
 		id serial primary key,
-		alias varchar(100) NOT NULL UNIQUE,
-		url varchar(100) NOT NULL
+		url varchar(100) NOT NULL UNIQUE,
+		alias varchar(100) NOT NULL UNIQUE
 		);
 		create index if not exists idx_alias on url(alias);`
 
@@ -105,4 +105,15 @@ func (s *Storage) DeleteURL(alias string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
+}
+
+func (s *Storage) CheckIfAliasExists(alias string) (bool, error) {
+	const op = "storage.postgres.CheckAlias"
+
+	var exists bool
+	err := s.db.QueryRow("select exists (select 1 from url where alias = $1)", alias).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+	return exists, nil
 }
