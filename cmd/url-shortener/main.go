@@ -56,7 +56,7 @@ func main() {
 
 	router.Post("/url", save.New(log, storage))
 	router.Get("{alias}", redirect.New(log, storage))
-	router.Post("/delete", deleter.New(log, storage))
+	router.Delete("/{alias}", deleter.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
