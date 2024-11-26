@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/foreground-eclipse/url-shortener/internal/config"
+	deleter "github.com/foreground-eclipse/url-shortener/internal/http-server/handlers/delete"
 	"github.com/foreground-eclipse/url-shortener/internal/http-server/handlers/redirect"
 	"github.com/foreground-eclipse/url-shortener/internal/http-server/handlers/url/save"
 	mwLogger "github.com/foreground-eclipse/url-shortener/internal/http-server/middleware/logger"
@@ -55,6 +56,7 @@ func main() {
 
 	router.Post("/url", save.New(log, storage))
 	router.Get("{alias}", redirect.New(log, storage))
+	router.Post("/delete", deleter.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
