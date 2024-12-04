@@ -14,8 +14,8 @@ import (
 )
 
 // URLGetter is an interface for getting url by alias.
-//
 
+// go:generate go run github.com/vektra/mockery/v2@v2.49.2 --name=URLGetter
 type URLGetter interface {
 	GetURL(alias string) (string, error)
 }
